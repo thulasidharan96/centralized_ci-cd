@@ -1,0 +1,16 @@
+{
+  "name": "sample-node-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test",
+    "lint": "node --test",
+    "build": "node -e \"console.log(\\\"build ok\\\")\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "private": "true"
+}

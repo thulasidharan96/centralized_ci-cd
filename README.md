@@ -21,12 +21,22 @@ Production-grade, organization-level GitHub Actions Internal Developer Platform 
     docker.yml
     release.yml
     deploy.yml
+    sample-ci-validation.yml
 scripts/
   deploy.sh
   rollback.sh
 policies/
   org-security-baseline.md
   repository-ruleset.json
+samples/
+  node-app/
+    package.json
+    index.js
+    index.test.js
+  fastapi-app/
+    app/main.py
+    tests/test_main.py
+    requirements.txt
 templates/
   consumer-repo/
     Dockerfile
@@ -106,3 +116,12 @@ Copy:
 - `templates/consumer-repo/Dockerfile`
 
 The consumer workflow is intentionally <50 lines and contains no business logic, only calls to reusable workflows.
+
+## Built-in Sample CI Validation
+
+This repository includes test sample projects for:
+
+- Node.js (`samples/node-app`)
+- FastAPI/Python (`samples/fastapi-app`)
+
+Use `.github/workflows/sample-ci-validation.yml` on branch `test` to validate reusable CI stages (build, test, security) for both runtimes while intentionally skipping deploy jobs.
