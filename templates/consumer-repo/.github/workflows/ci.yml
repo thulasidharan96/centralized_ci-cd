@@ -40,8 +40,7 @@ jobs:
       ${{
         always() &&
         (github.event_name != 'workflow_dispatch' || !inputs.skip_test) &&
-        needs.build.result != 'failure' &&
-        needs.build.result != 'cancelled'
+        (needs.build.result == 'success' || needs.build.result == 'skipped')
       }}
     uses: <YOUR-ORG>/<PLATFORM-REPO>/.github/workflows/test.yml@v1
     with: { runtime: node, runtime-version: "20", cache-dependency-path: "**/package-lock.json" }
@@ -52,8 +51,7 @@ jobs:
       ${{
         always() &&
         (github.event_name != 'workflow_dispatch' || !inputs.skip_security) &&
-        needs.build.result != 'failure' &&
-        needs.build.result != 'cancelled'
+        (needs.build.result == 'success' || needs.build.result == 'skipped')
       }}
     uses: <YOUR-ORG>/<PLATFORM-REPO>/.github/workflows/security.yml@v1
     with: { runtime: node, runtime-version: "20", sbom-format: spdx-json }
@@ -64,12 +62,9 @@ jobs:
         always() &&
         (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
         (github.event_name != 'workflow_dispatch' || !inputs.skip_docker) &&
-        needs.build.result != 'failure' &&
-        needs.build.result != 'cancelled' &&
-        needs.test.result != 'failure' &&
-        needs.test.result != 'cancelled' &&
-        needs.security.result != 'failure' &&
-        needs.security.result != 'cancelled'
+        (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+        (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+        (needs.security.result == 'success' || needs.security.result == 'skipped')
       }}
     needs: [build, test, security]
     uses: <YOUR-ORG>/<PLATFORM-REPO>/.github/workflows/docker.yml@v1
