@@ -80,7 +80,7 @@ Platform and consumer repositories should configure:
   - `azure-client-id`
   - `azure-tenant-id`
   - `azure-subscription-id`
-  - `registry_url` for ACR (e.g., `myregistry.azurecr.io`)
+  - `registry-url` for ACR (e.g., `myregistry.azurecr.io`)
 - `vercel_token` (as environment/repo secret when using Vercel)
 - Optional app deploy vars (service names, healthcheck URLs)
 

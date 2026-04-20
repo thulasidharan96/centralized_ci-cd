@@ -10,7 +10,7 @@ on:
         type: string
         required: false
         default: ghcr
-      registry_url:
+      registry-url:
         type: string
         required: false
         default: ""
@@ -100,11 +100,11 @@ jobs:
               echo "endpoint=${{ inputs.aws-account-id }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com" >> "$GITHUB_OUTPUT"
               ;;
             acr)
-              if [[ -z "${{ inputs.registry_url }}" ]]; then
-                echo "registry_url input is required for ACR" >&2
+              if [[ -z "${{ inputs['registry-url'] }}" ]]; then
+                echo "registry-url input is required for ACR" >&2
                 exit 1
               fi
-              echo "endpoint=${{ inputs.registry_url }}" >> "$GITHUB_OUTPUT"
+              echo "endpoint=${{ inputs['registry-url'] }}" >> "$GITHUB_OUTPUT"
               ;;
             *)
               echo "Unsupported registry '${{ inputs.registry }}'" >&2
@@ -144,7 +144,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          registry_name="${{ inputs.registry_url }}"
+          registry_name="${{ inputs['registry-url'] }}"
           registry_name="${registry_name%%.*}"
           az acr login --name "$registry_name"
 

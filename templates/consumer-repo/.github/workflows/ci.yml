@@ -7,23 +7,23 @@ on:
 
 jobs:
   build:
-    uses: thulasidharan96/centralized_ci-cd/.github/workflows/build.yml@main
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/build.yml@a6573d3bc55fd0605cdf47eb7803150f85661856
     with: { runtime: node, runtime-version: "20", cache-dependency-path: "**/package-lock.json" }
 
   test:
     needs: build
-    uses: thulasidharan96/centralized_ci-cd/.github/workflows/test.yml@main
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/test.yml@a6573d3bc55fd0605cdf47eb7803150f85661856
     with: { runtime: node, runtime-version: "20", cache-dependency-path: "**/package-lock.json" }
 
   security:
     needs: build
-    uses: thulasidharan96/centralized_ci-cd/.github/workflows/security.yml@main
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/security.yml@a6573d3bc55fd0605cdf47eb7803150f85661856
     with: { runtime: node, runtime-version: "20", sbom-format: spdx-json }
 
   docker:
     if: github.event_name == 'push'
     needs: [test, security]
-    uses: thulasidharan96/centralized_ci-cd/.github/workflows/docker.yml@main
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/docker.yml@a6573d3bc55fd0605cdf47eb7803150f85661856
     with:
       image_name: sample-app
       registry: ghcr
@@ -32,7 +32,7 @@ jobs:
   deploy:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: docker
-    uses: thulasidharan96/centralized_ci-cd/.github/workflows/deploy.yml@main
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/deploy.yml@a6573d3bc55fd0605cdf47eb7803150f85661856
     with:
       cloud: aws
       environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || github.ref == 'refs/heads/main' && 'test' || 'dev' }}
