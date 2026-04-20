@@ -1,0 +1,128 @@
+name: reusable-security
+
+on:
+  workflow_call:
+    inputs:
+      runtime:
+        type: string
+        required: false
+        default: "node"
+      runtime-version:
+        type: string
+        required: false
+        default: "20"
+      working-directory:
+        type: string
+        required: false
+        default: "."
+      sbom-format:
+        type: string
+        required: false
+        default: spdx-json
+      upload-sbom:
+        type: boolean
+        required: false
+        default: true
+      dast-target-url:
+        type: string
+        required: false
+        default: ""
+    outputs:
+      sbom-path:
+        value: ${{ jobs.sbom.outputs.sbom-path }}
+
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+  id-token: write
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ inputs.runtime == 'go' && 'go' || inputs.runtime == 'python' && 'python' || 'javascript-typescript' }}
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3
+
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy dependency vulnerability scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: ${{ inputs.working-directory }}
+          format: sarif
+          output: trivy-dependency-results.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          scanners: vuln
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-dependency-results.sarif
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy secret scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: ${{ inputs.working-directory }}
+          format: sarif
+          output: trivy-secret-results.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          scanners: secret
+      - name: Upload secret scan SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-secret-results.sarif
+
+  dast:
+    if: ${{ inputs['dast-target-url'] != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: OWASP ZAP baseline DAST scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: ${{ inputs['dast-target-url'] }}
+          fail_action: true
+
+  sbom:
+    runs-on: ubuntu-latest
+    outputs:
+      sbom-path: ${{ steps.sbom-meta.outputs.sbom-path }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: sbom-meta
+        run: |
+          if [[ "${{ inputs.sbom-format }}" == "cyclonedx-json" ]]; then
+            echo "sbom-path=sbom.cdx.json" >> "$GITHUB_OUTPUT"
+          else
+            echo "sbom-path=sbom.spdx.json" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0.24.0
+        with:
+          path: ${{ inputs.working-directory }}
+          format: ${{ inputs.sbom-format }}
+          output-file: ${{ steps.sbom-meta.outputs.sbom-path }}
+      - name: Upload SBOM artifact
+        if: ${{ inputs.upload-sbom }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: ${{ steps.sbom-meta.outputs.sbom-path }}
+          retention-days: 14

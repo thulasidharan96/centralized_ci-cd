@@ -1,0 +1,135 @@
+name: reusable-deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      cloud:
+        type: string
+        required: true
+      strategy:
+        type: string
+        required: false
+        default: rolling
+      image_uri:
+        type: string
+        required: false
+        default: ""
+      service_name:
+        type: string
+        required: false
+        default: ""
+      healthcheck_url:
+        type: string
+        required: false
+        default: ""
+      rollback_on_failure:
+        type: boolean
+        required: false
+        default: true
+      aws-region:
+        type: string
+        required: false
+        default: us-east-1
+      aws-role-to-assume:
+        type: string
+        required: false
+        default: ""
+      azure-client-id:
+        type: string
+        required: false
+        default: ""
+      azure-tenant-id:
+        type: string
+        required: false
+        default: ""
+      azure-subscription-id:
+        type: string
+        required: false
+        default: ""
+      vercel-org-id:
+        type: string
+        required: false
+        default: ""
+      vercel-project-id:
+        type: string
+        required: false
+        default: ""
+    secrets:
+      vercel_token:
+        required: false
+    outputs:
+      deployed-environment:
+        value: ${{ jobs.deploy.outputs.deployed-environment }}
+
+permissions:
+  contents: read
+  deployments: write
+  id-token: write
+
+jobs:
+  deploy:
+    name: deploy-${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    outputs:
+      deployed-environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        if: ${{ inputs.cloud == 'aws' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.aws-role-to-assume }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: Azure login (OIDC)
+        if: ${{ inputs.cloud == 'azure' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ inputs.azure-client-id }}
+          tenant-id: ${{ inputs.azure-tenant-id }}
+          subscription-id: ${{ inputs.azure-subscription-id }}
+
+      - name: Deploy AWS/Azure workload
+        if: ${{ inputs.cloud == 'aws' || inputs.cloud == 'azure' }}
+        run: |
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh \
+            --cloud "${{ inputs.cloud }}" \
+            --environment "${{ inputs.environment }}" \
+            --strategy "${{ inputs.strategy }}" \
+            --service-name "${{ inputs.service_name }}" \
+            --image-uri "${{ inputs.image_uri }}"
+
+      - name: Deploy to Vercel
+        if: ${{ inputs.cloud == 'vercel' }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.vercel_token }}
+          VERCEL_ORG_ID: ${{ inputs.vercel-org-id }}
+          VERCEL_PROJECT_ID: ${{ inputs.vercel-project-id }}
+        run: |
+          set -euo pipefail
+          npm install --global vercel@latest
+          vercel pull --yes --environment=${{ inputs.environment }} --token=$VERCEL_TOKEN
+          if [[ "${{ inputs.environment }}" == "prod" ]]; then
+            vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+          else
+            vercel deploy --prebuilt --token="$VERCEL_TOKEN"
+          fi
+
+      - name: Deployment gate healthcheck
+        if: ${{ inputs.healthcheck_url != '' }}
+        run: curl --fail --retry 5 --retry-delay 10 "${{ inputs.healthcheck_url }}"
+
+      - name: Rollback on failure
+        if: ${{ failure() && inputs.rollback_on_failure }}
+        run: |
+          chmod +x scripts/rollback.sh
+          ./scripts/rollback.sh \
+            --cloud "${{ inputs.cloud }}" \
+            --environment "${{ inputs.environment }}" \
+            --service-name "${{ inputs.service_name }}"

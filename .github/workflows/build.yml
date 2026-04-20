@@ -1,0 +1,86 @@
+name: reusable-build
+
+on:
+  workflow_call:
+    inputs:
+      runtime:
+        type: string
+        required: true
+      runtime-version:
+        type: string
+        required: false
+        default: "20"
+      build-command:
+        type: string
+        required: false
+        default: ""
+      working-directory:
+        type: string
+        required: false
+        default: "."
+      cache-dependency-path:
+        type: string
+        required: false
+        default: ""
+      artifact-name:
+        type: string
+        required: false
+        default: "build-output"
+      matrix-packages:
+        type: string
+        required: false
+        default: '["."]'
+    outputs:
+      artifact-name:
+        value: ${{ jobs.build.outputs.artifact-name }}
+      build-sha:
+        value: ${{ jobs.build.outputs.build-sha }}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(inputs.matrix-packages) }}
+    outputs:
+      artifact-name: ${{ inputs.artifact-name }}
+      build-sha: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup runtime
+        uses: ./.github/actions/setup-runtime
+        with:
+          runtime: ${{ inputs.runtime }}
+          runtime-version: ${{ inputs.runtime-version }}
+          cache: "true"
+          cache-dependency-path: ${{ inputs.cache-dependency-path }}
+          install-dependencies: "true"
+          working-directory: ${{ matrix.package }}
+
+      - name: Build
+        working-directory: ${{ matrix.package }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ inputs.build-command }}" ]]; then
+            bash -lc "${{ inputs.build-command }}"
+          elif [[ "${{ inputs.runtime }}" == "node" ]]; then
+            npm run build --if-present
+          elif [[ "${{ inputs.runtime }}" == "python" ]]; then
+            python -m build --wheel || true
+          elif [[ "${{ inputs.runtime }}" == "go" ]]; then
+            go build ./...
+          fi
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}-${{ matrix.package }}
+          path: ${{ matrix.package }}
+          retention-days: 7

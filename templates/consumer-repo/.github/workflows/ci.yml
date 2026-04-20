@@ -1,0 +1,42 @@
+name: ci
+on:
+  push:
+    branches: [develop, main]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  # Replace <YOUR-ORG>/<PLATFORM-REPO>@v1 with your platform repository and release tag.
+  build:
+    uses: <YOUR-ORG>/<PLATFORM-REPO>/.github/workflows/build.yml@v1
+    with: { runtime: node, runtime-version: "20", cache-dependency-path: "**/package-lock.json" }
+
+  test:
+    needs: build
+    uses: <YOUR-ORG>/<PLATFORM-REPO>/.github/workflows/test.yml@v1
+    with: { runtime: node, runtime-version: "20", cache-dependency-path: "**/package-lock.json" }
+
+  security:
+    needs: build
+    uses: <YOUR-ORG>/<PLATFORM-REPO>/.github/workflows/security.yml@v1
+    with: { runtime: node, runtime-version: "20", sbom-format: spdx-json }
+
+  docker:
+    if: github.event_name == 'push'
+    needs: [test, security]
+    uses: <YOUR-ORG>/<PLATFORM-REPO>/.github/workflows/docker.yml@v1
+    with:
+      image_name: sample-app
+      registry: ghcr
+      semver: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+
+  deploy:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    needs: docker
+    uses: <YOUR-ORG>/<PLATFORM-REPO>/.github/workflows/deploy.yml@v1
+    with:
+      cloud: aws
+      environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || github.ref == 'refs/heads/main' && 'test' || 'dev' }}
+      image_uri: ${{ needs.docker.outputs.image-uri }}
+      service_name: sample-app
+      aws-role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}

@@ -1,0 +1,23 @@
+{
+  "name": "org-ci-cd-baseline",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["~DEFAULT_BRANCH"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {"type": "required_signatures"},
+    {"type": "pull_request", "parameters": {"required_approving_review_count": 1}},
+    {"type": "required_status_checks", "parameters": {"strict_required_status_checks_policy": true, "required_status_checks": [
+      {"context": "build"},
+      {"context": "lint"},
+      {"context": "unit"},
+      {"context": "codeql"},
+      {"context": "dependency-scan"},
+      {"context": "secret-scan"}
+    ]}}
+  ]
+}
