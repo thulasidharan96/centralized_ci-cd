@@ -81,6 +81,6 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.artifact-name }}-${{ matrix.package }}
+          name: ${{ inputs.artifact-name }}-${{ replace(matrix.package, '/', '-') }}
           path: ${{ matrix.package }}
           retention-days: 7
