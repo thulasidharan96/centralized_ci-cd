@@ -1,0 +1,70 @@
+name: reusable-release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: false
+        default: ""
+      target-branch:
+        type: string
+        required: false
+        default: main
+      generate-notes:
+        type: boolean
+        required: false
+        default: true
+    outputs:
+      version:
+        value: ${{ jobs.release.outputs.version }}
+      tag:
+        value: ${{ jobs.release.outputs.tag }}
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: version
+        name: Resolve semantic version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ inputs.version }}" ]]; then
+            version="${{ inputs.version }}"
+          elif [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            version="${GITHUB_REF_NAME}"
+          else
+            latest="$(git tag --list 'v*' --sort=-v:refname | head -n1)"
+            if [[ -z "$latest" ]]; then
+              version="v0.1.0"
+            else
+              IFS='.' read -r major minor patch <<< "${latest#v}"
+              version="v${major}.${minor}.$((patch + 1))"
+            fi
+          fi
+
+          if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version must match vX.Y.Z" >&2
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          target_commitish: ${{ inputs.target-branch }}
+          generate_release_notes: ${{ inputs.generate-notes }}

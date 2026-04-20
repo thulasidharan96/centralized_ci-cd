@@ -1,0 +1,93 @@
+name: reusable-security
+
+on:
+  workflow_call:
+    inputs:
+      runtime:
+        type: string
+        required: false
+        default: "node"
+      runtime-version:
+        type: string
+        required: false
+        default: "20"
+      working-directory:
+        type: string
+        required: false
+        default: "."
+      sbom-format:
+        type: string
+        required: false
+        default: spdx-json
+      upload-sbom:
+        type: boolean
+        required: false
+        default: true
+    outputs:
+      sbom-path:
+        value: ${{ jobs.sbom.outputs.sbom-path }}
+
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+  id-token: write
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ inputs.runtime == 'go' && 'go' || inputs.runtime == 'python' && 'python' || 'javascript-typescript' }}
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3
+
+  dependency-and-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan (deps + secrets)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: ${{ inputs.working-directory }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          scanners: vuln,secret
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+  sbom:
+    runs-on: ubuntu-latest
+    outputs:
+      sbom-path: ${{ steps.sbom-meta.outputs.sbom-path }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: sbom-meta
+        run: |
+          if [[ "${{ inputs.sbom-format }}" == "cyclonedx-json" ]]; then
+            echo "sbom-path=sbom.cdx.json" >> "$GITHUB_OUTPUT"
+          else
+            echo "sbom-path=sbom.spdx.json" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Generate SBOM
+        uses: anchore/syft-action@v0
+        with:
+          path: ${{ inputs.working-directory }}
+          format: ${{ inputs.sbom-format }}
+          output-file: ${{ steps.sbom-meta.outputs.sbom-path }}
+      - name: Upload SBOM artifact
+        if: ${{ inputs.upload-sbom }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: ${{ steps.sbom-meta.outputs.sbom-path }}
+          retention-days: 14

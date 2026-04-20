@@ -1,0 +1,156 @@
+name: reusable-test
+
+on:
+  workflow_call:
+    inputs:
+      runtime:
+        type: string
+        required: true
+      runtime-version:
+        type: string
+        required: false
+        default: "20"
+      working-directory:
+        type: string
+        required: false
+        default: "."
+      matrix-packages:
+        type: string
+        required: false
+        default: '["."]'
+      lint-command:
+        type: string
+        required: false
+        default: ""
+      test-command:
+        type: string
+        required: false
+        default: ""
+      coverage-command:
+        type: string
+        required: false
+        default: ""
+      cache-dependency-path:
+        type: string
+        required: false
+        default: ""
+    outputs:
+      coverage-artifact:
+        value: ${{ jobs.unit.outputs.coverage-artifact }}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(inputs.matrix-packages) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-runtime
+        with:
+          runtime: ${{ inputs.runtime }}
+          runtime-version: ${{ inputs.runtime-version }}
+          cache: "true"
+          cache-dependency-path: ${{ inputs.cache-dependency-path }}
+      - name: Install deps (Node)
+        if: ${{ inputs.runtime == 'node' }}
+        working-directory: ${{ matrix.package }}
+        run: npm ci
+      - name: Install deps (Python)
+        if: ${{ inputs.runtime == 'python' }}
+        working-directory: ${{ matrix.package }}
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Install deps (Go)
+        if: ${{ inputs.runtime == 'go' }}
+        working-directory: ${{ matrix.package }}
+        run: go mod download
+      - name: Lint
+        working-directory: ${{ matrix.package }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ inputs.lint-command }}" ]]; then
+            bash -lc "${{ inputs.lint-command }}"
+          elif [[ "${{ inputs.runtime }}" == "node" ]]; then
+            npm run lint --if-present
+          elif [[ "${{ inputs.runtime }}" == "python" ]]; then
+            python -m pip check
+          elif [[ "${{ inputs.runtime }}" == "go" ]]; then
+            go vet ./...
+          fi
+
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(inputs.matrix-packages) }}
+    outputs:
+      coverage-artifact: coverage-${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-runtime
+        with:
+          runtime: ${{ inputs.runtime }}
+          runtime-version: ${{ inputs.runtime-version }}
+          cache: "true"
+          cache-dependency-path: ${{ inputs.cache-dependency-path }}
+      - name: Install deps (Node)
+        if: ${{ inputs.runtime == 'node' }}
+        working-directory: ${{ matrix.package }}
+        run: npm ci
+      - name: Install deps (Python)
+        if: ${{ inputs.runtime == 'python' }}
+        working-directory: ${{ matrix.package }}
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Install deps (Go)
+        if: ${{ inputs.runtime == 'go' }}
+        working-directory: ${{ matrix.package }}
+        run: go mod download
+      - name: Unit tests
+        working-directory: ${{ matrix.package }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ inputs.test-command }}" ]]; then
+            bash -lc "${{ inputs.test-command }}"
+          elif [[ "${{ inputs.runtime }}" == "node" ]]; then
+            npm test --if-present
+          elif [[ "${{ inputs.runtime }}" == "python" ]]; then
+            pytest -q
+          elif [[ "${{ inputs.runtime }}" == "go" ]]; then
+            go test ./...
+          fi
+      - name: Coverage
+        working-directory: ${{ matrix.package }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ inputs.coverage-command }}" ]]; then
+            bash -lc "${{ inputs.coverage-command }}"
+          elif [[ "${{ inputs.runtime }}" == "node" ]]; then
+            npm run coverage --if-present
+          elif [[ "${{ inputs.runtime }}" == "python" ]]; then
+            pytest --cov=. --cov-report=xml || true
+          elif [[ "${{ inputs.runtime }}" == "go" ]]; then
+            go test ./... -coverprofile=coverage.out
+          fi
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ github.sha }}-${{ matrix.package }}
+          path: |
+            ${{ matrix.package }}/coverage
+            ${{ matrix.package }}/coverage.xml
+            ${{ matrix.package }}/.coverage
+          if-no-files-found: ignore
+          retention-days: 7

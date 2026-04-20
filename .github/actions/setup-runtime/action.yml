@@ -1,0 +1,46 @@
+name: setup-runtime
+description: Setup language runtime with dependency caching
+inputs:
+  runtime:
+    description: Runtime type (node/python/go)
+    required: true
+  runtime-version:
+    description: Runtime version
+    required: true
+  cache:
+    description: Enable dependency cache
+    required: false
+    default: "true"
+  cache-dependency-path:
+    description: Dependency lock file path for cache key
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js (with cache)
+      if: ${{ inputs.runtime == 'node' && inputs.cache == 'true' }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.runtime-version }}
+        cache: npm
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+
+    - name: Setup Node.js (no cache)
+      if: ${{ inputs.runtime == 'node' && inputs.cache != 'true' }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.runtime-version }}
+
+    - name: Setup Python
+      if: ${{ inputs.runtime == 'python' }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.runtime-version }}
+
+    - name: Setup Go
+      if: ${{ inputs.runtime == 'go' }}
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.runtime-version }}
+        cache: ${{ inputs.cache == 'true' }}

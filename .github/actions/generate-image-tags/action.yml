@@ -1,0 +1,46 @@
+name: generate-image-tags
+description: Generate deterministic OCI tags for latest/sha/semver
+inputs:
+  image:
+    description: Full image name without tag
+    required: true
+  semver:
+    description: Semantic version tag (vX.Y.Z)
+    required: false
+    default: ""
+  sha:
+    description: Full commit SHA
+    required: false
+    default: ""
+outputs:
+  tags:
+    description: Newline-separated tags
+    value: ${{ steps.tags.outputs.tags }}
+  primary_tag:
+    description: Primary immutable tag
+    value: ${{ steps.tags.outputs.primary_tag }}
+runs:
+  using: composite
+  steps:
+    - id: tags
+      shell: bash
+      run: |
+        set -euo pipefail
+        sha="${{ inputs.sha }}"
+        sha="${sha:-${GITHUB_SHA}}"
+        short_sha="${sha:0:12}"
+
+        tags="${{ inputs.image }}:latest\n${{ inputs.image }}:sha-${short_sha}"
+        primary="${{ inputs.image }}:sha-${short_sha}"
+
+        if [[ -n "${{ inputs.semver }}" && "${{ inputs.semver }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          tags="${tags}\n${{ inputs.image }}:${{ inputs.semver }}"
+          primary="${{ inputs.image }}:${{ inputs.semver }}"
+        fi
+
+        {
+          echo "tags<<EOF"
+          printf '%b\n' "$tags"
+          echo "EOF"
+          echo "primary_tag=$primary"
+        } >> "$GITHUB_OUTPUT"

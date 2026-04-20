@@ -1,0 +1,41 @@
+name: ci
+on:
+  push:
+    branches: [develop, main]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  build:
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/build.yml@main
+    with: { runtime: node, runtime-version: "20", cache-dependency-path: "**/package-lock.json" }
+
+  test:
+    needs: build
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/test.yml@main
+    with: { runtime: node, runtime-version: "20", cache-dependency-path: "**/package-lock.json" }
+
+  security:
+    needs: build
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/security.yml@main
+    with: { runtime: node, runtime-version: "20", sbom-format: spdx-json }
+
+  docker:
+    if: github.event_name == 'push'
+    needs: [test, security]
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/docker.yml@main
+    with:
+      image_name: sample-app
+      registry: ghcr
+      semver: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+
+  deploy:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    needs: docker
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/deploy.yml@main
+    with:
+      cloud: aws
+      environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || github.ref == 'refs/heads/main' && 'test' || 'dev' }}
+      image_uri: ${{ needs.docker.outputs.image-uri }}
+      service_name: sample-app
+      aws-role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
