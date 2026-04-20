@@ -163,7 +163,7 @@ jobs:
           file: ${{ inputs.dockerfile }}
           push: ${{ inputs.push }}
           tags: ${{ steps.tags.outputs.tags }}
-          provenance: false
+          provenance: ${{ inputs.provenance }}
 
       - name: Container vulnerability scan (HIGH/CRITICAL)
         if: ${{ inputs.push }}
