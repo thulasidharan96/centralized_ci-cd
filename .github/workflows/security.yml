@@ -23,6 +23,10 @@ on:
         type: boolean
         required: false
         default: true
+      dast-target-url:
+        type: string
+        required: false
+        default: ""
     outputs:
       sbom-path:
         value: ${{ jobs.sbom.outputs.sbom-path }}
@@ -44,26 +48,57 @@ jobs:
       - uses: github/codeql-action/autobuild@v3
       - uses: github/codeql-action/analyze@v3
 
-  dependency-and-secrets:
+  dependency-scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Trivy filesystem scan (deps + secrets)
+      - name: Trivy dependency vulnerability scan
         uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: fs
           scan-ref: ${{ inputs.working-directory }}
           format: sarif
-          output: trivy-results.sarif
+          output: trivy-dependency-results.sarif
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: '1'
-          scanners: vuln,secret
+          scanners: vuln
       - name: Upload Trivy SARIF
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: trivy-results.sarif
+          sarif_file: trivy-dependency-results.sarif
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy secret scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: ${{ inputs.working-directory }}
+          format: sarif
+          output: trivy-secret-results.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          scanners: secret
+      - name: Upload secret scan SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-secret-results.sarif
+
+  dast:
+    if: ${{ inputs['dast-target-url'] != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: OWASP ZAP baseline DAST scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: ${{ inputs['dast-target-url'] }}
+          fail_action: true
 
   sbom:
     runs-on: ubuntu-latest

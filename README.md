@@ -55,7 +55,7 @@ Returned outputs include:
 
 - Build with dependency caching and matrix package support
 - Lint + unit test + coverage reporting
-- Security baseline: CodeQL + dependency/secrets scan (Trivy)
+- Security baseline: SAST (CodeQL) + dependency scan + secret detection + optional DAST (OWASP ZAP)
 - SBOM generation via Syft (SPDX or CycloneDX)
 - Container build + tagging (`latest`, `sha-*`, optional semver)
 - Container vulnerability scanning (fail on HIGH/CRITICAL)
@@ -94,7 +94,7 @@ Platform and consumer repositories should configure:
 - Branch protection or rulesets enabled (see `policies/repository-ruleset.json`)
 - Require signed commits
 - Require pull request approvals
-- Require centralized checks (`build`, `lint`, `unit`, `codeql`, `dependency-and-secrets`)
+- Require centralized checks (`build`, `lint`, `unit`, `codeql`, `dependency-scan`, `secret-scan`)
 - Restrict bypass permissions
 - Enable GitHub Advanced Security where available
 

@@ -95,7 +95,9 @@ Workflows emit outputs that chain to downstream jobs:
 ### Purpose
 
 - Run CodeQL (SAST)
-- Run dependency/secret scanning (Trivy)
+- Run dependency scanning (Trivy vuln scanner)
+- Run secret detection (Trivy secret scanner)
+- Run optional DAST (OWASP ZAP baseline) when a target URL is provided
 - Generate SBOM via Syft (`SPDX` or `CycloneDX`)
 
 ### Key inputs
@@ -103,6 +105,7 @@ Workflows emit outputs that chain to downstream jobs:
 - `runtime`
 - `sbom-format`: `spdx-json` or `cyclonedx-json`
 - `upload-sbom`
+- `dast-target-url` (optional, enables DAST job when set)
 
 ### Output
 
@@ -110,7 +113,8 @@ Workflows emit outputs that chain to downstream jobs:
 
 ### Notes
 
-- Trivy fails the job on HIGH/CRITICAL findings.
+- Dependency and secret scans fail on HIGH/CRITICAL findings.
+- DAST is executed only when `dast-target-url` is provided by the caller.
 - SARIF is uploaded for security visibility in GitHub Security tab.
 
 ---

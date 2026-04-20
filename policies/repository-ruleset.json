@@ -16,7 +16,8 @@
       {"context": "lint"},
       {"context": "unit"},
       {"context": "codeql"},
-      {"context": "dependency-and-secrets"}
+      {"context": "dependency-scan"},
+      {"context": "secret-scan"}
     ]}}
   ]
 }
