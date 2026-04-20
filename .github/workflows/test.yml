@@ -57,20 +57,8 @@ jobs:
           runtime-version: ${{ inputs.runtime-version }}
           cache: "true"
           cache-dependency-path: ${{ inputs.cache-dependency-path }}
-      - name: Install deps (Node)
-        if: ${{ inputs.runtime == 'node' }}
-        working-directory: ${{ matrix.package }}
-        run: npm ci
-      - name: Install deps (Python)
-        if: ${{ inputs.runtime == 'python' }}
-        working-directory: ${{ matrix.package }}
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      - name: Install deps (Go)
-        if: ${{ inputs.runtime == 'go' }}
-        working-directory: ${{ matrix.package }}
-        run: go mod download
+          install-dependencies: "true"
+          working-directory: ${{ matrix.package }}
       - name: Lint
         working-directory: ${{ matrix.package }}
         shell: bash
@@ -102,20 +90,8 @@ jobs:
           runtime-version: ${{ inputs.runtime-version }}
           cache: "true"
           cache-dependency-path: ${{ inputs.cache-dependency-path }}
-      - name: Install deps (Node)
-        if: ${{ inputs.runtime == 'node' }}
-        working-directory: ${{ matrix.package }}
-        run: npm ci
-      - name: Install deps (Python)
-        if: ${{ inputs.runtime == 'python' }}
-        working-directory: ${{ matrix.package }}
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      - name: Install deps (Go)
-        if: ${{ inputs.runtime == 'go' }}
-        working-directory: ${{ matrix.package }}
-        run: go mod download
+          install-dependencies: "true"
+          working-directory: ${{ matrix.package }}
       - name: Unit tests
         working-directory: ${{ matrix.package }}
         shell: bash

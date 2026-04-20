@@ -46,7 +46,7 @@ jobs:
           elif [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             version="${GITHUB_REF_NAME}"
           else
-            latest="$(git tag --list 'v*' --sort=-v:refname | head -n1)"
+            latest="$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)"
             if [[ -z "$latest" ]]; then
               version="v0.1.0"
             else
