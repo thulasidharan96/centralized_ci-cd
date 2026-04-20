@@ -6,6 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+  id-token: write
+
 jobs:
   node_build:
     uses: ./.github/workflows/build.yml
