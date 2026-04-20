@@ -78,9 +78,17 @@ jobs:
             go build ./...
           fi
 
+      - name: Compute artifact name
+        id: artifact_name
+        shell: bash
+        run: |
+          pkg="${{ matrix.package }}"
+          sanitized="${pkg//\//-}"
+          echo "value=${{ inputs.artifact-name }}-${sanitized}" >> "$GITHUB_OUTPUT"
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.artifact-name }}-${{ replace(matrix.package, '/', '-') }}
+          name: ${{ steps.artifact_name.outputs.value }}
           path: ${{ matrix.package }}
           retention-days: 7
