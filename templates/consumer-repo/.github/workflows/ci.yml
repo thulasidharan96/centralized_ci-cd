@@ -47,7 +47,18 @@ jobs:
     with: { runtime: node, runtime-version: "20", sbom-format: spdx-json }
 
   docker:
-    if: ${{ always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.event_name != 'workflow_dispatch' || !inputs.skip_docker) && needs.build.result != 'failure' && needs.build.result != 'cancelled' && needs.test.result != 'failure' && needs.test.result != 'cancelled' && needs.security.result != 'failure' && needs.security.result != 'cancelled' }}
+    if: >-
+      ${{
+        always() &&
+        (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+        (github.event_name != 'workflow_dispatch' || !inputs.skip_docker) &&
+        needs.build.result != 'failure' &&
+        needs.build.result != 'cancelled' &&
+        needs.test.result != 'failure' &&
+        needs.test.result != 'cancelled' &&
+        needs.security.result != 'failure' &&
+        needs.security.result != 'cancelled'
+      }}
     needs: [build, test, security]
     uses: <YOUR-ORG>/<PLATFORM-REPO>/.github/workflows/docker.yml@v1
     with:
@@ -56,7 +67,19 @@ jobs:
       semver: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
 
   deploy:
-    if: ${{ always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.event_name != 'workflow_dispatch' || !inputs.skip_deploy) && needs.docker.result == 'success' && (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
+    if: >-
+      ${{
+        always() &&
+        (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+        (github.event_name != 'workflow_dispatch' || !inputs.skip_deploy) &&
+        needs.docker.result == 'success' &&
+        (
+          github.event_name == 'workflow_dispatch' ||
+          github.ref == 'refs/heads/develop' ||
+          github.ref == 'refs/heads/main' ||
+          startsWith(github.ref, 'refs/tags/v')
+        )
+      }}
     needs: docker
     uses: <YOUR-ORG>/<PLATFORM-REPO>/.github/workflows/deploy.yml@v1
     with:
