@@ -37,7 +37,7 @@ Workflows emit outputs that chain to downstream jobs:
 
 ## 3) Stage-by-stage usage
 
-## Stage 1: BUILD (`.github/workflows/build.yml`)
+### Stage 1: BUILD (`.github/workflows/build.yml`)
 
 ### Purpose
 
@@ -66,7 +66,7 @@ Workflows emit outputs that chain to downstream jobs:
 
 ---
 
-## Stage 2 + 3: TEST + LINT (`.github/workflows/test.yml`)
+### Stage 2 + 3: TEST + LINT (`.github/workflows/test.yml`)
 
 ### Purpose
 
@@ -90,7 +90,7 @@ Workflows emit outputs that chain to downstream jobs:
 
 ---
 
-## Stage 4 + 5: SECURITY + SBOM (`.github/workflows/security.yml`)
+### Stage 4 + 5: SECURITY + SBOM (`.github/workflows/security.yml`)
 
 ### Purpose
 
@@ -115,7 +115,7 @@ Workflows emit outputs that chain to downstream jobs:
 
 ---
 
-## Stage 6 + 7 + 8 + 9 + 10: CONTAINER + SCAN + SIGN + PROVENANCE + ARTIFACT STORAGE (`.github/workflows/docker.yml`)
+### Stage 6 + 7 + 8 + 9 + 10: CONTAINER + SCAN + SIGN + PROVENANCE + ARTIFACT STORAGE (`.github/workflows/docker.yml`)
 
 ### Purpose
 
@@ -149,7 +149,7 @@ Workflows emit outputs that chain to downstream jobs:
 
 ---
 
-## Stage 11: RELEASE/VERSIONING (`.github/workflows/release.yml`)
+### Stage 11: RELEASE/VERSIONING (`.github/workflows/release.yml`)
 
 ### Purpose
 
@@ -174,7 +174,7 @@ Workflows emit outputs that chain to downstream jobs:
 
 ---
 
-## Stage 12: DEPLOYMENT (`.github/workflows/deploy.yml`)
+### Stage 12: DEPLOYMENT (`.github/workflows/deploy.yml`)
 
 ### Purpose
 

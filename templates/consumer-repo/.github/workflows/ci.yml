@@ -6,6 +6,7 @@ on:
   pull_request:
 
 jobs:
+  # Replace the pinned platform SHA with your released platform tag/SHA in your org.
   build:
     uses: thulasidharan96/centralized_ci-cd/.github/workflows/build.yml@a6573d3bc55fd0605cdf47eb7803150f85661856
     with: { runtime: node, runtime-version: "20", cache-dependency-path: "**/package-lock.json" }
