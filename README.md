@@ -2,6 +2,11 @@
 
 Production-grade, organization-level GitHub Actions Internal Developer Platform (IDP) for reusable CI/CD across 10-100+ repositories.
 
+## Documentation
+
+- Platform overview and quickstart: this `README.md`
+- Full stage-by-stage operator guide: [`USER_GUIDE.md`](./USER_GUIDE.md)
+
 ## Folder Structure
 
 ```text
