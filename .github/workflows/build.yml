@@ -83,8 +83,9 @@ jobs:
         shell: bash
         run: |
           pkg="${{ matrix.package }}"
+          artifact_name="${{ inputs.artifact-name }}"
           sanitized="${pkg//\//-}"
-          printf 'value=%s-%s\n' "${{ inputs.artifact-name }}" "${sanitized}" >> "$GITHUB_OUTPUT"
+          printf 'value=%s-%s\n' "${artifact_name}" "${sanitized}" >> "$GITHUB_OUTPUT"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
