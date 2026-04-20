@@ -221,6 +221,14 @@ Use the template:
 
 Template workflow is intentionally thin and contains no business logic.
 
+For manual runs, the template also exposes optional `workflow_dispatch` booleans to bypass specific stages:
+
+- `skip_build`
+- `skip_test`
+- `skip_security`
+- `skip_docker`
+- `skip_deploy`
+
 ---
 
 ## 5) Required GitHub permissions/secrets/settings
