@@ -1,0 +1,76 @@
+name: sample-ci-validation
+
+on:
+  push:
+    branches: [test]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+  id-token: write
+
+jobs:
+  node_build:
+    uses: ./.github/workflows/build.yml
+    with:
+      runtime: node
+      runtime-version: "20"
+      matrix-packages: '["samples/node-app"]'
+      cache-dependency-path: samples/node-app/package-lock.json
+
+  node_test:
+    needs: node_build
+    uses: ./.github/workflows/test.yml
+    with:
+      runtime: node
+      runtime-version: "20"
+      matrix-packages: '["samples/node-app"]'
+      cache-dependency-path: samples/node-app/package-lock.json
+
+  node_security:
+    needs: node_build
+    uses: ./.github/workflows/security.yml
+    with:
+      runtime: node
+      runtime-version: "20"
+      working-directory: samples/node-app
+
+  python_build:
+    uses: ./.github/workflows/build.yml
+    with:
+      runtime: python
+      runtime-version: "3.11"
+      matrix-packages: '["samples/fastapi-app"]'
+
+  python_test:
+    needs: python_build
+    uses: ./.github/workflows/test.yml
+    with:
+      runtime: python
+      runtime-version: "3.11"
+      matrix-packages: '["samples/fastapi-app"]'
+
+  python_security:
+    needs: python_build
+    uses: ./.github/workflows/security.yml
+    with:
+      runtime: python
+      runtime-version: "3.11"
+      working-directory: samples/fastapi-app
+
+  node_deploy:
+    needs: [node_test, node_security]
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Node deploy intentionally skipped for sample validation"
+
+  python_deploy:
+    needs: [python_test, python_security]
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Python deploy intentionally skipped for sample validation"
