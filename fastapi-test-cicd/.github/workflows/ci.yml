@@ -1,0 +1,106 @@
+name: ci
+
+on:
+  push:
+    branches: [develop, main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      skip_build:
+        description: "Skip build stage"
+        type: boolean
+        default: false
+      skip_test:
+        description: "Skip test/lint stage"
+        type: boolean
+        default: false
+      skip_security:
+        description: "Skip security stage"
+        type: boolean
+        default: false
+      skip_docker:
+        description: "Skip docker stage"
+        type: boolean
+        default: false
+      skip_deploy:
+        description: "Skip deploy stage"
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skip_build }}
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/build.yml@V1.0.0
+    with:
+      runtime: python
+      runtime-version: "3.11"
+      cache-dependency-path: requirements.txt
+
+  test:
+    needs: build
+    if: >-
+      ${{
+        always() &&
+        (github.event_name != 'workflow_dispatch' || !inputs.skip_test) &&
+        (needs.build.result == 'success' || needs.build.result == 'skipped')
+      }}
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/test.yml@V1.0.0
+    with:
+      runtime: python
+      runtime-version: "3.11"
+      cache-dependency-path: requirements.txt
+
+  security:
+    needs: build
+    if: >-
+      ${{
+        always() &&
+        (github.event_name != 'workflow_dispatch' || !inputs.skip_security) &&
+        (needs.build.result == 'success' || needs.build.result == 'skipped')
+      }}
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/security.yml@V1.0.0
+    with:
+      runtime: python
+      runtime-version: "3.11"
+      sbom-format: spdx-json
+
+  docker:
+    if: >-
+      ${{
+        always() &&
+        (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+        (github.event_name != 'workflow_dispatch' || !inputs.skip_docker) &&
+        (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+        (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+        (needs.security.result == 'success' || needs.security.result == 'skipped')
+      }}
+    needs: [build, test, security]
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/docker.yml@V1.0.0
+    with:
+      image_name: fastapi-test-cicd
+      registry: ghcr
+      semver: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+
+  deploy:
+    if: >-
+      ${{
+        always() &&
+        (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+        (github.event_name != 'workflow_dispatch' || !inputs.skip_deploy) &&
+        needs.docker.result == 'success' &&
+        (
+          github.event_name == 'workflow_dispatch' ||
+          github.ref == 'refs/heads/develop' ||
+          github.ref == 'refs/heads/main' ||
+          startsWith(github.ref, 'refs/tags/v')
+        )
+      }}
+    needs: docker
+    uses: thulasidharan96/centralized_ci-cd/.github/workflows/deploy.yml@V1.0.0
+    with:
+      cloud: aws
+      environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || github.ref == 'refs/heads/main' && 'test' || 'dev' }}
+      image_uri: ${{ needs.docker.outputs.image-uri }}
+      service_name: fastapi-test-cicd
+      aws-role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}

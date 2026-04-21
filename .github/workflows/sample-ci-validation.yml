@@ -61,6 +61,31 @@ jobs:
       runtime-version: "3.11"
       working-directory: samples/fastapi-app
 
+  fastapi_cicd_build:
+    uses: ./.github/workflows/build.yml
+    with:
+      runtime: python
+      runtime-version: "3.11"
+      matrix-packages: '["fastapi-test-cicd"]'
+      cache-dependency-path: fastapi-test-cicd/requirements.txt
+
+  fastapi_cicd_test:
+    needs: fastapi_cicd_build
+    uses: ./.github/workflows/test.yml
+    with:
+      runtime: python
+      runtime-version: "3.11"
+      matrix-packages: '["fastapi-test-cicd"]'
+      cache-dependency-path: fastapi-test-cicd/requirements.txt
+
+  fastapi_cicd_security:
+    needs: fastapi_cicd_build
+    uses: ./.github/workflows/security.yml
+    with:
+      runtime: python
+      runtime-version: "3.11"
+      working-directory: fastapi-test-cicd
+
   node_deploy:
     needs: [node_test, node_security]
     if: ${{ false }}
@@ -74,3 +99,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo "Python deploy intentionally skipped for sample validation"
+
+  fastapi_cicd_deploy:
+    needs: [fastapi_cicd_test, fastapi_cicd_security]
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "fastapi-test-cicd deploy intentionally skipped for sample validation"
